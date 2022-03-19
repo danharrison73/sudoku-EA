@@ -206,7 +206,6 @@ class Solver:
     def solve(self, population_size, num_of_gens, elite_threshold, selection_rate, mutation_rate):
         # generate an initial population
         pop = self.generate_random_population(population_size)
-        pop.sort(key=lambda x: x.determine_cols_fitness(), reverse=False)
 
         for gen in range(0, num_of_gens):
             print(pop[0].config)
@@ -243,9 +242,9 @@ class Solver:
                 child_a, child_b = self.crossover_rows(parent_a, parent_b)
 
                 # Todo Mutate children
-                # for i in range(0, 5):
-                #     child_a.config = solver.mutate(child_a, mutation_rate)
-                #     child_b.config = solver.mutate(child_b, mutation_rate)
+                for i in range(0, 5):
+                    child_a.config = solver.mutate(child_a, mutation_rate)
+                    child_b.config = solver.mutate(child_b, mutation_rate)
 
                 child_a.config = self.fill_immutable_squares(child_a.config)
                 child_b.config = self.fill_immutable_squares(child_b.config)
@@ -302,4 +301,4 @@ if __name__ == "__main__":
 
     # solver.crossover_squares(parent_a,parent_b)
 
-    solver.solve(2000, 1000, 0.05, 0.8, 0.05)
+    solver.solve(2000, 1000, 0.0, 1, 0.0)
