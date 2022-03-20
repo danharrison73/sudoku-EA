@@ -8,40 +8,46 @@ class Candidate:
     def __init__(self, immutable_squares, config):
         self.immutable_squares = immutable_squares
         self.config = config
+        self.update_cols_fitness()
+        self.update_rows_fitness()
+        self.update_squares_fitness()
+        self.update_fitness()
 
     def get_config(self):
         return self.config
 
     # fitness functions
-    def determine_cols_fitness(self):
+    def update_cols_fitness(self):
         columns_fitness = 0
         for i in range(9):
-            column = self.config[:, i]
+            column = np.copy(self.config[:, i])
             unique_vals = len(np.unique(column))
             columns_fitness += 1 / (9 * (10 - unique_vals))
-        return columns_fitness
+        self.cols_fitness = columns_fitness
 
-    def determine_rows_fitness(self):
+    def update_rows_fitness(self):
         rows_fitness = 0
         for i in range(9):
-            row = self.config[i, :]
+            row = np.copy(self.config[i, :])
             unique_vals = len(np.unique(row))
             rows_fitness += 1 / (9 * (10 - unique_vals))
-        return rows_fitness
+        self.rows_fitness = rows_fitness
 
-    def determine_squares_fitness(self):
+    def update_squares_fitness(self):
         squares_fitness = 0
         for i in range(3):
             for j in range(3):
-                square = self.config[i * 3:i * 3 + 3, j * 3:j * 3 + 3]
+                square = np.copy(self.config[i * 3:i * 3 + 3, j * 3:j * 3 + 3])
                 square_as_list = square.flatten()
                 unique_vals = len(np.unique(square_as_list))
                 squares_fitness += 1 / (9 * (10 - unique_vals))
-        return squares_fitness
+        self.squares_fitness = squares_fitness
 
-    def determine_fitness(self):
-        fitness = (self.determine_cols_fitness() + self.determine_cols_fitness() + self.determine_squares_fitness()) / 3
-        return fitness
+    def update_fitness(self):
+        self.update_cols_fitness()
+        self.update_rows_fitness()
+        self.update_squares_fitness()
+        self.fitness = (self.cols_fitness + self.rows_fitness + self.squares_fitness) / 3
 
 
 class Solver:
@@ -236,8 +242,10 @@ class Solver:
     def generate_random_population(self, population_size):
         population = []
         for i in range(population_size):
-            population.append(self.create_candidate())
-        population.sort(key=lambda x: x.determine_fitness(), reverse=False)
+            new_candidate = self.create_candidate()
+            new_candidate.update_fitness()
+            population.append(new_candidate)
+        population.sort(key=lambda x: x.fitness, reverse=False)
         return population
 
     def solve(self, population_size, num_of_gens, elite_threshold, selection_rate, mutation_rate):
@@ -247,37 +255,32 @@ class Solver:
         for gen in range(0, num_of_gens):
             print(pop[0].config)
             print('generation', gen)
-            print('fitness=', pop[0].determine_fitness())
-            print('row fitness=', pop[0].determine_rows_fitness())
-            print('column fitness=', pop[0].determine_cols_fitness())
-            print('squares fitness=', pop[0].determine_squares_fitness())
+            print('fitness=', pop[0].fitness)
+            print('row fitness=', pop[0].rows_fitness)
+            print('column fitness=', pop[0].cols_fitness)
+            print('squares fitness=', pop[0].squares_fitness)
 
             next_gen = []
             num_of_elite = round(population_size * elite_threshold)
 
             # select elite candidates to automatically be selected
             for e in range(0, num_of_elite):
-                next_gen.append(pop[e])
+                elite_candidate = pop[e]
+                elite_candidate.update_fitness()
+                next_gen.append(elite_candidate)
 
             for count in range(num_of_elite, population_size, 2):
-
-                # # select crossover function
-                # f = random.randint(0, 1)
-                # child_a = None
-                # child_b = None
-                # if f == 0:
-                #     # choose candidates based on column fitness
-                #     parent_a = select_candidate(pop, selection_rate, fitness_function='col')
-                #     parent_b = select_candidate(pop, selection_rate, fitness_function='col')
-                #     child_a, child_b = self.crossover_columns(parent_a, parent_b)
-                # elif f == 1:
-                #     # choose candidates based on row fitness
-                #     parent_a = select_candidate(pop, selection_rate, fitness_function='row')
-                #     parent_b = select_candidate(pop, selection_rate, fitness_function='row')
-                #     child_a, child_b = self.crossover_rows(parent_a, parent_b)
                 parent_a = select_candidate(pop, selection_rate, fitness_function='overall')
                 parent_b = select_candidate(pop, selection_rate, fitness_function='overall')
-                child_a, child_b = self.crossover_squares(parent_a, parent_b)
+                child_a = None
+                child_b = None
+                f = random.randint(0, 2)
+                if f == 0:
+                    child_a, child_b = self.crossover_squares(parent_a, parent_b)
+                elif f == 1:
+                    child_a, child_b = self.crossover_columns(parent_a, parent_b)
+                elif f == 2:
+                    child_a, child_b = self.crossover_rows(parent_a, parent_b)
 
                 # Todo Mutate children
                 for i in range(0, 5):
@@ -287,10 +290,13 @@ class Solver:
                 child_a.config = self.fill_immutable_squares(child_a.config)
                 child_b.config = self.fill_immutable_squares(child_b.config)
 
+                child_a.update_fitness()
+                child_b.update_fitness()
+
                 next_gen.append(child_a)
                 next_gen.append(child_b)
 
-            next_gen.sort(key=lambda x: x.determine_fitness(), reverse=True)
+            next_gen.sort(key=lambda x: x.fitness, reverse=True)
 
             pop = next_gen
 
@@ -299,8 +305,8 @@ def select_candidate(candidates, selection_rate, fitness_function):
     parent_a = candidates[random.randint(0, len(candidates) - 1)]
     parent_b = candidates[random.randint(0, len(candidates) - 1)]
 
-    parent_a_fitness = parent_a.determine_fitness()
-    parent_b_fitness = parent_b.determine_fitness()
+    parent_a_fitness = parent_a.fitness
+    parent_b_fitness = parent_b.fitness
 
     if parent_a_fitness > parent_b_fitness:
         fitter = parent_a
@@ -320,11 +326,6 @@ if __name__ == "__main__":
     input = '002000634106000580007300290000000000085001006000750023003000050000000000314002000009080400720040009'
 
     solver = Solver(input)
-
-    # parent_a = solver.create_candidate()
-    # parent_b = solver.create_candidate()
-    #
-    # solver.crossover_squares(parent_a,parent_b)
 
 
 
