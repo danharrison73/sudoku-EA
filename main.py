@@ -252,6 +252,11 @@ class Solver:
         # generate an initial population
         pop = self.generate_random_population(population_size)
 
+        # number of consecutive generations where fitness has not improved
+        generations_unimproved = 0
+
+        # for simulated annealing function
+        temperature = 0
         for gen in range(0, num_of_gens):
             print(pop[0].config)
             print('generation', gen)
@@ -259,6 +264,8 @@ class Solver:
             print('row fitness=', pop[0].rows_fitness)
             print('column fitness=', pop[0].cols_fitness)
             print('squares fitness=', pop[0].squares_fitness)
+
+            current_gen_fitness = pop[0].fitness
 
             next_gen = []
             num_of_elite = round(population_size * elite_threshold)
@@ -282,8 +289,8 @@ class Solver:
                 elif f == 2:
                     child_a, child_b = self.crossover_rows(parent_a, parent_b)
 
-                # Todo Mutate children
-                for i in range(0, 5):
+                # Mutate children
+                for i in range(0, 4 + temperature):
                     child_a.config = solver.mutate(child_a, mutation_rate)
                     child_b.config = solver.mutate(child_b, mutation_rate)
 
@@ -297,6 +304,27 @@ class Solver:
                 next_gen.append(child_b)
 
             next_gen.sort(key=lambda x: x.fitness, reverse=True)
+
+            next_gen_fitness = next_gen[0].fitness
+
+
+            # if no improvement in fitness from the last generation then generations unimproved will increase
+            if current_gen_fitness == next_gen_fitness:
+                generations_unimproved += 1
+            # if there is an improvement then the generations unimproved resets to zero
+            else:
+                generations_unimproved = 0
+
+            # if there have been 10 consecutive generations without improvement then the temperature is rapidly
+            # increased
+            if generations_unimproved >= 5:
+                print('bring in the heat')
+                temperature = 9
+
+            # if there is a temperature then it is decreased by zero
+            if temperature != 0:
+                print('temp:', temperature)
+                temperature -= 1
 
             pop = next_gen
 
