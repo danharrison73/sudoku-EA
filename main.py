@@ -182,17 +182,54 @@ class Solver:
         div_point = random.randint(0, 8)
 
         new_square_a = numpy.concatenate([square_a[:div_point], square_b[div_point:]])
+        new_square_a = new_square_a.reshape(3, 3)
+
         new_square_b = numpy.concatenate([square_b[:div_point], square_a[div_point:]])
+        new_square_b = new_square_b.reshape(3, 3)
+
+        # convert square a number into a position on the grid
+        square_a_number = random.randint(0,8)
+        square_a_x = 0
+        square_a_y = 0
+        count = 0
+        for i in range(3):
+            for j in range(3):
+                count += 1
+                square_a_x = j
+                square_a_y = i
+                if count > square_a_number:
+                    break
+            else:
+                continue
+            break
+
+        # convert square b number into a position on the grid
+        square_b_number = random.randint(0, 8)
+        square_b_x = 0
+        square_b_y = 0
+        count = 0
+        for i in range(3):
+            for j in range(3):
+                count += 1
+                square_b_x = j
+                square_b_y = i
+                if count > square_a_number:
+                    break
+            else:
+                continue
+            break
 
         # create configs for new candidates c and d
-        # candidate_c_config = np.copy(candidate_a.config)
-        # candidate_c_config[row_a_number] = new_row_a
-        #
-        # candidate_d_config = np.copy(candidate_b.config)
-        # candidate_d_config[:, row_b_number] = new_row_b
+        candidate_c_config = np.copy(candidate_a.config)
+        candidate_c_config[square_a_y * 3:square_a_y * 3 + 3, square_a_x * 3:square_a_x * 3 + 3]\
+            = new_square_a
 
-        # candidate_c = Candidate(self.get_immutable_squares_coordinates(), candidate_c_config)
-        # candidate_d = Candidate(self.get_immutable_squares_coordinates(), candidate_d_config)
+        candidate_d_config = np.copy(candidate_b.config)
+        candidate_d_config[square_b_y * 3:square_b_y * 3 + 3, square_b_x * 3:square_b_x * 3 + 3] \
+            = new_square_b
+
+        candidate_c = Candidate(self.get_immutable_squares_coordinates(), candidate_c_config)
+        candidate_d = Candidate(self.get_immutable_squares_coordinates(), candidate_d_config)
 
         return candidate_c, candidate_d
 
@@ -213,6 +250,7 @@ class Solver:
             print('fitness=', pop[0].determine_fitness())
             print('row fitness=', pop[0].determine_rows_fitness())
             print('column fitness=', pop[0].determine_cols_fitness())
+            print('squares fitness=', pop[0].determine_squares_fitness())
 
             next_gen = []
             num_of_elite = round(population_size * elite_threshold)
@@ -223,10 +261,10 @@ class Solver:
 
             for count in range(num_of_elite, population_size, 2):
 
-                # select crossover function
-                f = random.randint(0, 1)
-                child_a = None
-                child_b = None
+                # # select crossover function
+                # f = random.randint(0, 1)
+                # child_a = None
+                # child_b = None
                 # if f == 0:
                 #     # choose candidates based on column fitness
                 #     parent_a = select_candidate(pop, selection_rate, fitness_function='col')
@@ -237,9 +275,9 @@ class Solver:
                 #     parent_a = select_candidate(pop, selection_rate, fitness_function='row')
                 #     parent_b = select_candidate(pop, selection_rate, fitness_function='row')
                 #     child_a, child_b = self.crossover_rows(parent_a, parent_b)
-                parent_a = select_candidate(pop, selection_rate, fitness_function='row')
-                parent_b = select_candidate(pop, selection_rate, fitness_function='row')
-                child_a, child_b = self.crossover_rows(parent_a, parent_b)
+                parent_a = select_candidate(pop, selection_rate, fitness_function='overall')
+                parent_b = select_candidate(pop, selection_rate, fitness_function='overall')
+                child_a, child_b = self.crossover_squares(parent_a, parent_b)
 
                 # Todo Mutate children
                 for i in range(0, 5):
@@ -261,21 +299,8 @@ def select_candidate(candidates, selection_rate, fitness_function):
     parent_a = candidates[random.randint(0, len(candidates) - 1)]
     parent_b = candidates[random.randint(0, len(candidates) - 1)]
 
-    parent_a_fitness = 0
-    parent_b_fitness = 0
-
-    if fitness_function == 'col':
-        parent_a_fitness = parent_a.determine_cols_fitness()
-        parent_b_fitness = parent_b.determine_cols_fitness()
-    elif fitness_function == 'row':
-        parent_a_fitness = parent_a.determine_rows_fitness()
-        parent_b_fitness = parent_b.determine_rows_fitness()
-    elif fitness_function == 'square':
-        parent_a_fitness = parent_a.determine_squares_fitness()
-        parent_b_fitness = parent_b.determine_squares_fitness()
-    elif fitness_function == 'overall':
-        parent_a_fitness = parent_a.determine_fitness()
-        parent_b_fitness = parent_b.determine_fitness()
+    parent_a_fitness = parent_a.determine_fitness()
+    parent_b_fitness = parent_b.determine_fitness()
 
     if parent_a_fitness > parent_b_fitness:
         fitter = parent_a
@@ -296,9 +321,11 @@ if __name__ == "__main__":
 
     solver = Solver(input)
 
-    parent_a = solver.create_candidate()
-    parent_b = solver.create_candidate()
-
+    # parent_a = solver.create_candidate()
+    # parent_b = solver.create_candidate()
+    #
     # solver.crossover_squares(parent_a,parent_b)
 
-    solver.solve(2000, 1000, 0.0, 1, 0.0)
+
+
+    solver.solve(4000, 3000, 0.05, 0.8, 0.4)
