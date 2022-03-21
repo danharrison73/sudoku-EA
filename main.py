@@ -273,7 +273,9 @@ class Solver:
             # select elite candidates to automatically be selected
             for e in range(0, num_of_elite):
                 elite_candidate = pop[e]
-                elite_candidate.update_fitness()
+                if temperature != 0:
+                    elite_candidate.config = solver.mutate(elite_candidate, mutation_rate)
+                    elite_candidate.update_fitness()
                 next_gen.append(elite_candidate)
 
             for count in range(num_of_elite, population_size, 2):
@@ -315,16 +317,15 @@ class Solver:
             else:
                 generations_unimproved = 0
 
-            # if there have been 10 consecutive generations without improvement then the temperature is rapidly
-            # increased
+            # if there have been a certain number of consecutive generations without improvement then the temperature
+            # is rapidly increased
             if generations_unimproved >= 5:
-                print('bring in the heat')
-                temperature = 9
+                temperature = 10
 
             # if there is a temperature then it is decreased by zero
             if temperature != 0:
                 print('temp:', temperature)
-                temperature -= 1
+                temperature -= 2
 
             pop = next_gen
 
